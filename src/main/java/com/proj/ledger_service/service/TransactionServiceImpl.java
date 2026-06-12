@@ -6,6 +6,7 @@ import java.util.UUID;
 import org.springframework.stereotype.Service;
 
 import com.proj.ledger_service.entity.Transaction;
+import com.proj.ledger_service.kafka.TransactionProducer;
 import com.proj.ledger_service.model.TransactionStatus;
 import com.proj.ledger_service.repository.TransactionRepository;
 
@@ -16,12 +17,18 @@ import lombok.RequiredArgsConstructor;
 public class TransactionServiceImpl implements TransactionService {
 
     private final TransactionRepository transactionRepository;
+    private final TransactionProducer transactionProducer;
 
     @Override
     public Transaction createTransaction(Transaction transaction) {
         // Implementation for creating a transaction
         transaction.setStatus(TransactionStatus.PENDING);
-        return transactionRepository.save(transaction);
+        Transaction savedTransaction = transactionRepository.save(transaction);
+
+        // Stream the saved transaction entity straight to Apache Kafka
+        transactionProducer.sendTransactionEvent(savedTransaction);
+
+        return savedTransaction;
     }
 
     @Override
